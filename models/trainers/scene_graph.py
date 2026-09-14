@@ -98,6 +98,18 @@ class MultiTrainer(BasicTrainer):
         else:
             return True
 
+    def _configure_road_background_prior(self) -> None:
+        if "Background" not in self.models or "RoadNodes" not in self.models:
+            return
+        background = self.models["Background"]
+        if hasattr(background, "set_road_surface_prior"):
+            background.set_road_surface_prior(self.models["RoadNodes"]._means)
+
+    def load_state_dict(self, *args, **kwargs):
+        message = super().load_state_dict(*args, **kwargs)
+        self._configure_road_background_prior()
+        return message
+
     def init_gaussians_from_dataset(
         self,
         dataset: DrivingDataset,
@@ -302,7 +314,8 @@ class MultiTrainer(BasicTrainer):
                 del self.model_config[class_name]
                 del self.gaussian_classes[class_name]
                 logger.warning(f"Model for {class_name} is removed")
-                
+
+        self._configure_road_background_prior()
         logger.info(f"Initialized gaussians from pcd")
     
     def forward(

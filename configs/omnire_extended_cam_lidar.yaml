@@ -86,6 +86,16 @@ model:
         w: 1.
         step_interval: 10
         max_gauss_ratio: 10.       # threshold of ratio of gaussian max to min scale before applying regularization loss from the PhysGaussian paper
+      road_intrusion:
+        opacity_w: 0.005
+        start_after: 500
+        step_interval: 4
+        grid_size: 0.25
+        max_grid_cells: 4_000_000
+        below_margin: 0.1
+        above_margin: 0.15
+        transition: 0.05
+        densify_confidence: 0.5
   RigidNodes:
     type: models.nodes.RigidNodes
     init:

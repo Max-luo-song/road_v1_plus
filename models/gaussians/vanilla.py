@@ -26,6 +26,7 @@ import math
 from models.gaussians.basics import *
 from plyfile import PlyData
 from utils.general_utils import quaternion_multiply, quaternion_normalize, euler_xyz_to_matrix, compute_gs_aabb
+from utils.road_surface_prior import build_road_surface_grid, road_intrusion_confidence
 from pytorch3d.transforms import matrix_to_quaternion, quaternion_to_matrix
 
 logger = logging.getLogger()
@@ -79,6 +80,10 @@ class VanillaGaussians(nn.Module):
         self._opacities = torch.zeros(1, 1, device=self.device)
         self._features_dc = torch.zeros(1, 3, device=self.device)
         self._features_rest = torch.zeros(1, num_sh_bases(self.sh_degree) - 1, 3, device=self.device)
+        self.register_buffer("_road_grid_origin", None, persistent=False)
+        self.register_buffer("_road_grid_heights", None, persistent=False)
+        self.register_buffer("_road_grid_valid", None, persistent=False)
+        self._road_grid_cell_size = None
         
         if self.particle_cfg and weather_type != "":
             self.initialize_weather(weather_type)
@@ -158,6 +163,44 @@ class VanillaGaussians(nn.Module):
     
     def preprocess_per_train_step(self, step: int):
         self.step = step
+
+    @torch.no_grad()
+    def set_road_surface_prior(self, road_points: torch.Tensor) -> None:
+        road_cfg = self.reg_cfg.get("road_intrusion", None)
+        if road_cfg is None or not road_points.numel():
+            return
+        (
+            self._road_grid_origin,
+            self._road_grid_heights,
+            self._road_grid_valid,
+            self._road_grid_cell_size,
+        ) = build_road_surface_grid(
+            road_points.detach(),
+            cell_size=road_cfg.get("grid_size", 0.25),
+            max_grid_cells=road_cfg.get("max_grid_cells", 4_000_000),
+        )
+        logger.info(
+            "%s road prior: %dx%d cells at %.3f m",
+            self.class_prefix,
+            self._road_grid_heights.shape[1],
+            self._road_grid_heights.shape[0],
+            self._road_grid_cell_size,
+        )
+
+    def get_road_intrusion_confidence(self, means: torch.Tensor) -> torch.Tensor:
+        road_cfg = self.reg_cfg.get("road_intrusion", None)
+        if road_cfg is None or self._road_grid_heights is None:
+            return means.new_zeros((means.shape[0],))
+        return road_intrusion_confidence(
+            means,
+            self._road_grid_origin,
+            self._road_grid_heights,
+            self._road_grid_valid,
+            self._road_grid_cell_size,
+            below_margin=road_cfg.get("below_margin", 0.1),
+            above_margin=road_cfg.get("above_margin", 0.15),
+            transition=road_cfg.get("transition", 0.05),
+        )
         
     def postprocess_per_train_step(
         self,
@@ -235,6 +278,16 @@ class VanillaGaussians(nn.Module):
                 
                 avg_grad_norm = self.xys_grad_norm / self.vis_counts
                 high_grads = (avg_grad_norm > self.ctrl_cfg.densify_grad_thresh).squeeze()
+                road_cfg = self.reg_cfg.get("road_intrusion", None)
+                if (
+                    road_cfg is not None
+                    and self._road_grid_heights is not None
+                    and self.step >= road_cfg.get("start_after", 500)
+                ):
+                    intrusion = self.get_road_intrusion_confidence(self._means)
+                    high_grads &= intrusion < road_cfg.get(
+                        "densify_confidence", 0.5
+                    )
                 
                 splits = (
                     self.get_scaling.max(dim=-1).values > \
@@ -559,6 +612,24 @@ class VanillaGaussians(nn.Module):
                 log_one_minus_opacity = (1-opacity) * torch.log(1 - opacity)
                 sparse_loss = -1 * (log_opacity + log_one_minus_opacity)[self.cur_radii > 0].mean()
                 loss_dict["sparse_reg"] = sparse_loss * sparse_reg.w
+
+        road_cfg = self.reg_cfg.get("road_intrusion", None)
+        if (
+            road_cfg is not None
+            and self._road_grid_heights is not None
+            and self.step >= road_cfg.get("start_after", 500)
+            and self.step % road_cfg.get("step_interval", 4) == 0
+        ):
+            visible = self.cur_radii > 0
+            if visible.any():
+                confidence = self.get_road_intrusion_confidence(
+                    self._means[visible]
+                ).detach()
+                confidence_sum = confidence.sum()
+                opacity = torch.sigmoid(self._opacities[visible]).squeeze(-1)
+                loss_dict["road_intrusion_opacity"] = (
+                    (opacity * confidence).sum() / confidence_sum.clamp_min(1e-6)
+                ) * road_cfg.get("opacity_w", 0.005)
 
         # compute the max of scaling
         max_s_square_reg = self.reg_cfg.get("max_s_square_reg", None)
