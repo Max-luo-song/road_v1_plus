@@ -33,7 +33,7 @@ experiment_output_dir=${experiment_output_dir:-""}
 render_groups=${render_groups:-"group0,group1"}
 
 # ------------------------- 轨迹 -------------------------
-novel_traj_shifts=${novel_traj_shifts:-"left_1,left_2,left_3,right_1,right_2,right_3"}
+novel_traj_shifts=${novel_traj_shifts:-"left_3"}
 traj_types_csv=${traj_types_csv:-""}
 include_original_traj=${include_original_traj:-true}
 

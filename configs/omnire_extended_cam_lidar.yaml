@@ -237,8 +237,6 @@ model:
     type: models.nodes.RoadNodes
     init:
       from_lidar: True
-    ctrl:
-      lane_influence_radius: 0.2
     reg:
       from_lidar: True
       lowest_opacity: 0.2
