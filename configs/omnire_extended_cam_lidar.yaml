@@ -31,6 +31,13 @@ trainer:
       loss_type: l1 # choose from ["l1", "l2"]
     road:
       w: 1
+    road_coverage:
+      w: 0.1
+      target_alpha: 0.95
+      lane_target_alpha: 0.98 # used when lane_masks are available
+      start_after: 500
+      warmup_steps: 1000
+      erosion_px: 3
     affine:
       w: 0.00001 # weight of affine regularization
   res_schedule:
@@ -237,9 +244,11 @@ model:
     type: models.nodes.RoadNodes
     init:
       from_lidar: True
+      opacity_init_value: 0.7
     reg:
       from_lidar: True
       lowest_opacity: 0.2
+      alpha_min: 0.2 # opt into differentiable opacity floor
   SMPLNodes: 
     type: models.nodes.SMPLNodes
     init:

@@ -8,6 +8,7 @@ from torch.nn import Parameter
 from pytorch3d.ops import knn_points
 
 from models.gaussians.basics import *
+from utils.opacity import bounded_logit, bounded_sigmoid
 
 logger = logging.getLogger()
 
@@ -29,6 +30,14 @@ class RoadNodes(nn.Module):
         self.class_prefix = class_name + "#"
         self.ctrl_cfg = ctrl
         self.reg_cfg = reg
+        self.init_cfg = kwargs.get("init", {})
+        # -1 identifies the original sigmoid + clamp parameterization.
+        alpha_min = float(self.reg_cfg.get("alpha_min", -1.0))
+        if alpha_min != -1.0 and not 0.0 <= alpha_min < 1.0:
+            raise ValueError("alpha_min must be in [0, 1)")
+        self.register_buffer(
+            "_opacity_alpha_min", torch.tensor(alpha_min, dtype=torch.float64, device=device)
+        )
         self.networks_cfg = networks
         self.scene_scale = scene_scale
         self.scene_origin = scene_origin
@@ -204,7 +213,16 @@ class RoadNodes(nn.Module):
         self._features_rest = Parameter(shs[:, 1:, :])
         
         # 透明度初始化(会训练，初始化随机即可)
-        self._opacities = Parameter(torch.logit(0.2 * torch.ones(num_points, 1, device=self.device)))
+        if self.reg_cfg.get("alpha_min", None) is not None:
+            opacity_init_value = float(self.init_cfg.get("opacity_init_value", 0.7))
+            alpha_min = float(self.reg_cfg["alpha_min"])
+            if not alpha_min < opacity_init_value < 1.0:
+                raise ValueError("opacity_init_value must be between alpha_min and 1")
+            self._opacities = Parameter(self._opacity_to_raw(
+                torch.full((num_points, 1), opacity_init_value, device=self.device)
+            ))
+        else:
+            self._opacities = Parameter(torch.logit(0.2 * torch.ones(num_points, 1, device=self.device)))
         return False
     
     @property
@@ -245,9 +263,18 @@ class RoadNodes(nn.Module):
                 # return torch.exp(self._scales)
     @property
     def get_opacity(self):
+        alpha_min = self.reg_cfg.get("alpha_min", None)
+        if alpha_min is not None:
+            return bounded_sigmoid(self._opacities, float(alpha_min))
         lowest_opacity = self.reg_cfg.get("lowest_opacity", None)
         # print("lowest_opacity:", lowest_opacity)
         return torch.sigmoid(self._opacities).clamp(min=lowest_opacity)
+
+    def _opacity_to_raw(self, opacity: torch.Tensor) -> torch.Tensor:
+        alpha_min = self.reg_cfg.get("alpha_min", None)
+        if alpha_min is not None:
+            return bounded_logit(opacity, float(alpha_min))
+        return torch.logit(opacity)
 
     @property
     def get_quats(self):
@@ -442,7 +469,7 @@ class RoadNodes(nn.Module):
                         
                 if self.step % reset_interval == self.ctrl_cfg.refine_interval:
                     reset_value = torch.min(self.get_opacity.data, torch.ones_like(self._opacities.data) * self.ctrl_cfg.reset_alpha_value)
-                    self._opacities.data = torch.logit(reset_value)
+                    self._opacities.data = self._opacity_to_raw(reset_value)
                     for group in optimizer.param_groups:
                         if group["name"] == self.class_prefix+"opacity":
                             param_state = optimizer.state[group["params"][0]]
@@ -590,7 +617,8 @@ class RoadNodes(nn.Module):
         sparse_reg = self.reg_cfg.get("sparse_reg", None)
         if sparse_reg:
             if (self.cur_radii > 0).sum():
-                opacity = torch.sigmoid(self._opacities)
+                opacity = (self.get_opacity if self.reg_cfg.get("alpha_min", None) is not None
+                           else torch.sigmoid(self._opacities))
                 opacity = opacity.clamp(1e-6, 1-1e-6)
                 log_opacity = opacity * torch.log(opacity)
                 log_one_minus_opacity = (1-opacity) * torch.log(1 - opacity)
@@ -604,6 +632,21 @@ class RoadNodes(nn.Module):
         return loss_dict
     
     def load_state_dict(self, state_dict: Dict, **kwargs) -> str:
+        state_dict = state_dict.copy()
+        saved_alpha_min = float(state_dict.get("_opacity_alpha_min", -1.0))
+        current_alpha_min = float(self._opacity_alpha_min)
+        if saved_alpha_min != current_alpha_min:
+            raw = state_dict["_opacities"]
+            opacity = (bounded_sigmoid(raw, saved_alpha_min)
+                       if saved_alpha_min >= 0.0 else torch.sigmoid(raw))
+            if saved_alpha_min < 0.0:
+                # Legacy checkpoints used the configured hard opacity floor.
+                lowest = self.reg_cfg.get("lowest_opacity", None)
+                if lowest is not None:
+                    opacity = opacity.clamp(min=float(lowest))
+            state_dict["_opacities"] = self._opacity_to_raw(opacity)
+            logger.info("Converted RoadNodes checkpoint opacity parameterization")
+        state_dict["_opacity_alpha_min"] = self._opacity_alpha_min.clone()
         N = state_dict["_means"].shape[0]
         self._means = Parameter(torch.zeros((N,) + self._means.shape[1:], device=self.device))
         self._scales = Parameter(torch.zeros((N,) + self._scales.shape[1:], device=self.device))

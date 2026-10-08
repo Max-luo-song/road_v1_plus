@@ -966,6 +966,49 @@ class BasicTrainer(nn.Module):
             loss_dict.update({"road_loss": road_loss})
             loss_dict.update({"ssim_road_loss": simloss_road})
 
+        road_coverage_cfg = self.losses_dict.get("road_coverage", None)
+        if (
+            road_coverage_cfg is not None
+            and "RoadNodes_opacity" in outputs
+            and image_infos.get("road_masks") is not None
+            and float(road_coverage_cfg.get("w", 0.0)) > 0
+            and self.step > int(road_coverage_cfg.get("start_after", 0))
+        ):
+            from models.losses import erode_binary_mask, road_coverage_loss
+
+            valid_road_mask = image_infos["road_masks"] & valid_loss_mask
+            if image_infos.get("dynamic_masks") is not None:
+                valid_road_mask &= ~image_infos["dynamic_masks"]
+            valid_road_mask = erode_binary_mask(
+                valid_road_mask,
+                int(road_coverage_cfg.get("erosion_px", 3)),
+            )
+
+            if valid_road_mask.any():
+                lane_mask = image_infos.get("lane_masks", None)
+                if lane_mask is not None:
+                    lane_mask = lane_mask & valid_road_mask
+                coverage_loss = road_coverage_loss(
+                    outputs["RoadNodes_opacity"],
+                    valid_road_mask,
+                    float(road_coverage_cfg.get("target_alpha", 0.95)),
+                    lane_mask=lane_mask,
+                    lane_target_alpha=float(
+                        road_coverage_cfg.get("lane_target_alpha", 0.98)
+                    ),
+                )
+                warmup_steps = int(road_coverage_cfg.get("warmup_steps", 0))
+                if warmup_steps > 0:
+                    start_after = int(road_coverage_cfg.get("start_after", 0))
+                    warmup = min(
+                        1.0, (self.step - start_after) / warmup_steps
+                    )
+                else:
+                    warmup = 1.0
+                loss_dict["road_coverage_loss"] = (
+                    coverage_loss * float(road_coverage_cfg.get("w", 0.0)) * warmup
+                )
+
         # 不透明度的熵正则化，其主要作用是鼓励不透明度预测值趋向于两极化（即非常接近0或非常接近1）。
         # ----- reg loss -----
         opacity_entropy_reg = self.losses_dict.get("opacity_entropy", None)

@@ -481,6 +481,21 @@ class MultiTrainer(BasicTrainer):
             outputs['road_rgb'] = outputs['rgb'] * road_mask[..., None]
         outputs["freeze_mask"] = freeze_mask # 带回路面标注
 
+        road_coverage_cfg = self.losses_dict.get("road_coverage", None)
+        if (
+            self.training
+            and road_coverage_cfg is not None
+            and road_coverage_cfg.get("w", 0.0) > 0
+            and self.step > road_coverage_cfg.get("start_after", 0)
+            and image_infos.get("road_masks") is not None
+            and "RoadNodes" in self.gaussian_classes
+        ):
+            road_gaussian_mask = (
+                self.pts_labels == self.gaussian_classes["RoadNodes"]
+            )
+            _, _, road_opacity = render_fn(road_gaussian_mask)
+            outputs["RoadNodes_opacity"] = road_opacity
+
         if not self.training and self.render_each_class:
             with torch.no_grad():
                 for class_name in self.gaussian_classes.keys():

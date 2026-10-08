@@ -5,6 +5,34 @@ import torch
 import torch.nn.functional as F
 from torch import autograd, nn, Tensor
 
+def erode_binary_mask(mask: Tensor, erosion_px: int) -> Tensor:
+    """Erode a 2D boolean mask, treating pixels outside the image as invalid."""
+    mask = mask.bool()
+    if erosion_px <= 0:
+        return mask
+    kernel_size = erosion_px * 2 + 1
+    kernel = torch.ones(
+        (1, 1, kernel_size, kernel_size), device=mask.device, dtype=torch.float32
+    )
+    neighborhood = F.conv2d(
+        mask[None, None].float(), kernel, padding=erosion_px
+    )
+    return neighborhood[0, 0] == kernel_size * kernel_size
+
+
+def road_coverage_loss(
+    road_opacity: Tensor,
+    valid_road_mask: Tensor,
+    target_alpha: float,
+    lane_mask: Tensor = None,
+    lane_target_alpha: float = None,
+) -> Tensor:
+    opacity = road_opacity.squeeze(-1)
+    target = torch.full_like(opacity, target_alpha)
+    if lane_mask is not None and lane_target_alpha is not None:
+        target = torch.where(lane_mask.bool(), lane_target_alpha, target)
+    return torch.relu(target - opacity).square()[valid_road_mask].mean()
+
 def reduce(
     loss: Union[torch.Tensor, np.ndarray], 
     mask: Union[torch.Tensor, np.ndarray] = None, 

@@ -1,0 +1,209 @@
+{
+  "checkpoint": "../output/qcraft_20260528_173056_QCJPSD850510_406_421/20261007_lidar+traincam2_3_5_9_12_0_1_6_7_10_11soft-and-opacity/group0/checkpoint_final.pth",
+  "frame": 40,
+  "cam": 2,
+  "left": 3,
+  "stride": 4,
+  "space": "pinhole before image distortion; bottom-left rectangle is not a road mask",
+  "results": {
+    "learned": {
+      "bottom_left_alpha_mean": 0.6924650652142689,
+      "bottom_left_alpha_below_0.5": 0.2908088235294118,
+      "bottom_left_zero_contributors": 0.28051470588235294,
+      "near_road": {
+        "mean_alpha": 0.9523785238145714,
+        "below_0.5": 0.013865546218487394,
+        "below_0.95": 0.20168067226890757
+      }
+    },
+    "leaking_pixel_neighbors": [
+      {
+        "pixel": [
+          204.5,
+          500.5
+        ],
+        "alpha": 0.2540228416054401,
+        "potential_contributors": 19,
+        "fraction_neighbor_raw_below_minus14": 0.7894736842105263,
+        "fraction_neighbor_xy_both_clamped": 0.8947368421052632,
+        "neighbor_alpha_mean": 0.22411592304706573,
+        "alpha_if_all_one": 0.7583166869298881
+      },
+      {
+        "pixel": [
+          200.5,
+          500.5
+        ],
+        "alpha": 0.25416028304417554,
+        "potential_contributors": 22,
+        "fraction_neighbor_raw_below_minus14": 0.8181818181818182,
+        "fraction_neighbor_xy_both_clamped": 0.9090909090909091,
+        "neighbor_alpha_mean": 0.2208273559808731,
+        "alpha_if_all_one": 0.7907077569626856
+      },
+      {
+        "pixel": [
+          204.5,
+          480.5
+        ],
+        "alpha": 0.30244380500866397,
+        "potential_contributors": 26,
+        "fraction_neighbor_raw_below_minus14": 0.7692307692307693,
+        "fraction_neighbor_xy_both_clamped": 1.0,
+        "neighbor_alpha_mean": 0.21722067892551422,
+        "alpha_if_all_one": 0.8923998945018686
+      },
+      {
+        "pixel": [
+          208.5,
+          500.5
+        ],
+        "alpha": 0.32008087787648265,
+        "potential_contributors": 19,
+        "fraction_neighbor_raw_below_minus14": 0.7368421052631579,
+        "fraction_neighbor_xy_both_clamped": 0.8947368421052632,
+        "neighbor_alpha_mean": 0.25328966975212097,
+        "alpha_if_all_one": 0.8018421160735274
+      },
+      {
+        "pixel": [
+          196.5,
+          500.5
+        ],
+        "alpha": 0.32182952374561236,
+        "potential_contributors": 21,
+        "fraction_neighbor_raw_below_minus14": 0.9047619047619048,
+        "fraction_neighbor_xy_both_clamped": 0.9047619047619048,
+        "neighbor_alpha_mean": 0.2216220647096634,
+        "alpha_if_all_one": 0.8934666457770932
+      },
+      {
+        "pixel": [
+          24.5,
+          432.5
+        ],
+        "alpha": 0.325828927623733,
+        "potential_contributors": 19,
+        "fraction_neighbor_raw_below_minus14": 0.5789473684210527,
+        "fraction_neighbor_xy_both_clamped": 0.7894736842105263,
+        "neighbor_alpha_mean": 0.2916554808616638,
+        "alpha_if_all_one": 0.8857936684918115
+      },
+      {
+        "pixel": [
+          208.5,
+          480.5
+        ],
+        "alpha": 0.33934148805585684,
+        "potential_contributors": 24,
+        "fraction_neighbor_raw_below_minus14": 0.7916666666666666,
+        "fraction_neighbor_xy_both_clamped": 1.0,
+        "neighbor_alpha_mean": 0.21201372146606445,
+        "alpha_if_all_one": 0.9237173528141192
+      },
+      {
+        "pixel": [
+          28.5,
+          432.5
+        ],
+        "alpha": 0.34610274889012005,
+        "potential_contributors": 17,
+        "fraction_neighbor_raw_below_minus14": 0.7058823529411765,
+        "fraction_neighbor_xy_both_clamped": 0.7647058823529411,
+        "neighbor_alpha_mean": 0.24766629934310913,
+        "alpha_if_all_one": 0.9833198221371346
+      },
+      {
+        "pixel": [
+          264.5,
+          456.5
+        ],
+        "alpha": 0.39420925894566095,
+        "potential_contributors": 24,
+        "fraction_neighbor_raw_below_minus14": 0.08333333333333333,
+        "fraction_neighbor_xy_both_clamped": 0.9166666666666666,
+        "neighbor_alpha_mean": 0.42313575744628906,
+        "alpha_if_all_one": 0.8968328676697107
+      },
+      {
+        "pixel": [
+          240.5,
+          456.5
+        ],
+        "alpha": 0.3948511752431565,
+        "potential_contributors": 29,
+        "fraction_neighbor_raw_below_minus14": 0.3448275862068966,
+        "fraction_neighbor_xy_both_clamped": 0.7586206896551724,
+        "neighbor_alpha_mean": 0.3166124224662781,
+        "alpha_if_all_one": 0.8874979431740679
+      },
+      {
+        "pixel": [
+          200.5,
+          504.5
+        ],
+        "alpha": 0.3989909409402796,
+        "potential_contributors": 24,
+        "fraction_neighbor_raw_below_minus14": 0.6666666666666666,
+        "fraction_neighbor_xy_both_clamped": 0.9166666666666666,
+        "neighbor_alpha_mean": 0.2460189312696457,
+        "alpha_if_all_one": 0.93613387363967
+      },
+      {
+        "pixel": [
+          0.5,
+          468.5
+        ],
+        "alpha": 0.40248008193484885,
+        "potential_contributors": 15,
+        "fraction_neighbor_raw_below_minus14": 0.2,
+        "fraction_neighbor_xy_both_clamped": 0.9333333333333333,
+        "neighbor_alpha_mean": 0.8394725918769836,
+        "alpha_if_all_one": 0.5630468639498889
+      }
+    ],
+    "alpha_one": {
+      "bottom_left_alpha_mean": 0.7137407794742274,
+      "bottom_left_alpha_below_0.5": 0.2847426470588235,
+      "bottom_left_zero_contributors": 0.28051470588235294,
+      "near_road": {
+        "mean_alpha": 0.9963275913213832,
+        "below_0.5": 0.0,
+        "below_0.95": 0.018487394957983194
+      }
+    },
+    "alpha_one_xy_double": {
+      "bottom_left_alpha_mean": 0.7209641344002762,
+      "bottom_left_alpha_below_0.5": 0.2792279411764706,
+      "bottom_left_zero_contributors": 0.27297794117647056,
+      "near_road": {
+        "mean_alpha": 0.9999999702027967,
+        "below_0.5": 0.0,
+        "below_0.95": 0.0
+      }
+    }
+  },
+  "representative_patch_probe": {
+    "novel_pixel": [
+      204.5,
+      500.5
+    ],
+    "novel_alpha": 0.2540228416054401,
+    "representative_gaussian_index": 65988,
+    "world_xyz": [
+      48.21826171875,
+      3.2437124252319336,
+      -2.4382851123809814
+    ],
+    "raw_opacity": -19.078636169433594,
+    "single_gaussian_alpha": 0.2,
+    "training_camera5_frame40_projected_pixel": [
+      713.0114135742188,
+      294.75140380859375
+    ],
+    "training_camera5_alpha_at_projection": 0.9754645824432373,
+    "training_camera5_road_mask": true,
+    "training_camera2_projection_outside_image": true,
+    "scope": "single representative patch; CPU projection and alpha approximation, with learned camera pose correction for training probe"
+  }
+}
