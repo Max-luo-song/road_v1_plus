@@ -481,20 +481,39 @@ class MultiTrainer(BasicTrainer):
             outputs['road_rgb'] = outputs['rgb'] * road_mask[..., None]
         outputs["freeze_mask"] = freeze_mask # 带回路面标注
 
-        road_coverage_cfg = self.losses_dict.get("road_coverage", None)
+        from utils.road_supervision import supervision_weight, unpremultiply_road_rgb
+
+        road_color_cfg = self.losses_dict.get("road_color")
+        road_coverage_cfg = self.losses_dict.get("road_coverage")
+        road_contribution_cfg = self.losses_dict.get("road_contribution")
+        color_active = supervision_weight(road_color_cfg, self.step) > 0
+        coverage_active = supervision_weight(road_coverage_cfg, self.step) > 0
+        contribution_active = supervision_weight(road_contribution_cfg, self.step) > 0
         if (
             self.training
-            and road_coverage_cfg is not None
-            and road_coverage_cfg.get("w", 0.0) > 0
-            and self.step > road_coverage_cfg.get("start_after", 0)
+            and (color_active or coverage_active or contribution_active)
             and image_infos.get("road_masks") is not None
             and "RoadNodes" in self.gaussian_classes
         ):
             road_gaussian_mask = (
                 self.pts_labels == self.gaussian_classes["RoadNodes"]
             )
-            _, _, road_opacity = render_fn(road_gaussian_mask)
+            road_rgb, _, road_opacity = render_fn(road_gaussian_mask)
             outputs["RoadNodes_opacity"] = road_opacity
+            if color_active:
+                road_color = unpremultiply_road_rgb(road_rgb, road_opacity)
+                # Use the same exposure calibration as full RGB, but this loss
+                # must improve RoadNodes rather than the shared affine model.
+                outputs["RoadNodes_color"] = self.affine_transformation(
+                    road_color, image_infos, detach_affine=True,
+                )
+            if contribution_active:
+                # Render class tags with ALL opacities/depths intact. Channel 0
+                # is RoadNodes' actual compositing weight after occlusion.
+                tags = torch.zeros_like(gs.rgbs)
+                tags[:, 0] = road_gaussian_mask.to(tags.dtype)
+                contributions, _, _ = render_fn(colors_override=tags)
+                outputs["RoadNodes_contribution"] = contributions[..., :1]
 
         if not self.training and self.render_each_class:
             with torch.no_grad():

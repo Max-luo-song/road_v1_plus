@@ -141,6 +141,7 @@ class CameraData(object):
         self.buffer_downscale = buffer_downscale
         self.device = device
         self.render_only = render_only  # syc
+        self.lane_masks = None
         self.weather_type = weather_type
 
         self.mix_novel_alias = mix_novel_alias
@@ -745,6 +746,8 @@ class CameraData(object):
                 
             if hasattr(self, 'road_masks') and self.road_masks is not None:
                 self.road_masks = self.road_masks.to(device)
+            if self.lane_masks is not None:
+                self.lane_masks = self.lane_masks.to(device)
                 
             if hasattr(self, 'lidar_depth_maps') and self.lidar_depth_maps is not None:
                 self.lidar_depth_maps = self.lidar_depth_maps.to(device)
@@ -761,7 +764,7 @@ class CameraData(object):
         Returns:
             a dict containing the rays for rendering the given frame index.
         """
-        rgb, sky_mask, road_mask = None, None, None
+        rgb, sky_mask, road_mask, lane_mask = None, None, None, None
         dynamic_mask, human_mask, vehicle_mask = None, None, None
         pixel_coords, normalized_time = None, None
 
@@ -833,6 +836,9 @@ class CameraData(object):
                     .squeeze(0)
                     .squeeze(0)
                 ).bool()
+        if self.lane_masks is not None:
+            from utils.lane_masks import resize_lane_mask
+            lane_mask = resize_lane_mask(self.lane_masks[frame_idx], (img_height, img_width))
         if self.dynamic_masks is not None:
             dynamic_mask = self.dynamic_masks[frame_idx]
             if self.downscale_factor != 1.0:
@@ -933,6 +939,7 @@ class CameraData(object):
             "pixels": rgb,
             "sky_masks": sky_mask,
             "road_masks": road_mask,
+            "lane_masks": lane_mask,
             "dynamic_masks": dynamic_mask,
             "human_masks": human_mask,
             "vehicle_masks": vehicle_mask,

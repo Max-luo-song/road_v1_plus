@@ -1,5 +1,13 @@
 seed: 0
 dataset: waymo/3cams
+data:
+  pixel_source:
+    load_lane_mask: true # Qcraft: prefer lane_masks/*.png, otherwise RGB candidates
+    lane_mask_source: auto
+    lane_min_brightness: 0.48
+    lane_min_contrast: 0.06
+    lane_contrast_window: 15
+    lane_white_chroma: 0.22
 
 # ------------- Trainer ------------ #
 trainer:
@@ -31,10 +39,24 @@ trainer:
       loss_type: l1 # choose from ["l1", "l2"]
     road:
       w: 1
+    road_color:
+      w: 0.5
+      lane_multiplier: 2.0
+      edge_multiplier: 0.2
+      start_after: 0
+      warmup_steps: 1000
+      erosion_px: 3
     road_coverage:
       w: 0.1
       target_alpha: 0.95
-      lane_target_alpha: 0.98 # used when lane_masks are available
+      lane_target_alpha: 0.98
+      lane_multiplier: 1.0 # additional mean over marking pixels, not whole road
+      start_after: 0
+      warmup_steps: 1000
+      erosion_px: 3
+    road_contribution:
+      w: 0.05 # ensure RoadNodes dominate full-scene road RGB, after occlusion
+      target_share: 0.9
       start_after: 500
       warmup_steps: 1000
       erosion_px: 3

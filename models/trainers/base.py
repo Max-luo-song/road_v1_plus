@@ -733,7 +733,7 @@ class BasicTrainer(nn.Module):
         cam: dataclass_camera,
         **kwargs,
     ) -> Dict[str, torch.Tensor]:
-        def render_fn(opaticy_mask=None, return_info=False):
+        def render_fn(opaticy_mask=None, return_info=False, colors_override=None):
             renders, alphas, info = rasterization(
                 means=gs.means,
                 quats=gs.quats,
@@ -743,7 +743,7 @@ class BasicTrainer(nn.Module):
                     if opaticy_mask is not None
                     else gs.opacities.squeeze()
                 ),
-                colors=gs.rgbs,
+                colors=gs.rgbs if colors_override is None else colors_override,
                 viewmats=torch.linalg.inv(cam.camtoworlds)[None, ...],  # [C, 4, 4]
                 Ks=cam.Ks[None, ...],  # [C, 3, 3]
                 width=cam.W,
@@ -789,10 +789,13 @@ class BasicTrainer(nn.Module):
         return results, render_fn
 
     def affine_transformation(
-        self, rgb_blended: torch.Tensor, image_infos: Dict[str, torch.Tensor]
+        self, rgb_blended: torch.Tensor, image_infos: Dict[str, torch.Tensor],
+        detach_affine: bool = False,
     ):
         if "Affine" in self.models:
             affine_trs = self.models["Affine"](image_infos)
+            if detach_affine:
+                affine_trs = affine_trs.detach()
             rgb_transformed = (
                 affine_trs[..., :3, :3] @ rgb_blended[..., None]
                 + affine_trs[..., :3, 3:]
@@ -966,48 +969,11 @@ class BasicTrainer(nn.Module):
             loss_dict.update({"road_loss": road_loss})
             loss_dict.update({"ssim_road_loss": simloss_road})
 
-        road_coverage_cfg = self.losses_dict.get("road_coverage", None)
-        if (
-            road_coverage_cfg is not None
-            and "RoadNodes_opacity" in outputs
-            and image_infos.get("road_masks") is not None
-            and float(road_coverage_cfg.get("w", 0.0)) > 0
-            and self.step > int(road_coverage_cfg.get("start_after", 0))
-        ):
-            from models.losses import erode_binary_mask, road_coverage_loss
-
-            valid_road_mask = image_infos["road_masks"] & valid_loss_mask
-            if image_infos.get("dynamic_masks") is not None:
-                valid_road_mask &= ~image_infos["dynamic_masks"]
-            valid_road_mask = erode_binary_mask(
-                valid_road_mask,
-                int(road_coverage_cfg.get("erosion_px", 3)),
-            )
-
-            if valid_road_mask.any():
-                lane_mask = image_infos.get("lane_masks", None)
-                if lane_mask is not None:
-                    lane_mask = lane_mask & valid_road_mask
-                coverage_loss = road_coverage_loss(
-                    outputs["RoadNodes_opacity"],
-                    valid_road_mask,
-                    float(road_coverage_cfg.get("target_alpha", 0.95)),
-                    lane_mask=lane_mask,
-                    lane_target_alpha=float(
-                        road_coverage_cfg.get("lane_target_alpha", 0.98)
-                    ),
-                )
-                warmup_steps = int(road_coverage_cfg.get("warmup_steps", 0))
-                if warmup_steps > 0:
-                    start_after = int(road_coverage_cfg.get("start_after", 0))
-                    warmup = min(
-                        1.0, (self.step - start_after) / warmup_steps
-                    )
-                else:
-                    warmup = 1.0
-                loss_dict["road_coverage_loss"] = (
-                    coverage_loss * float(road_coverage_cfg.get("w", 0.0)) * warmup
-                )
+        if "RoadNodes_opacity" in outputs:
+            from utils.road_supervision import compute_road_supervision_losses
+            loss_dict.update(compute_road_supervision_losses(
+                outputs, image_infos, self.losses_dict, self.step,
+            ))
 
         # 不透明度的熵正则化，其主要作用是鼓励不透明度预测值趋向于两极化（即非常接近0或非常接近1）。
         # ----- reg loss -----
@@ -1086,6 +1052,14 @@ class BasicTrainer(nn.Module):
         metric_dict = {}
         psnr = self.psnr(outputs["rgb"], image_infos["pixels"])
         metric_dict.update({"psnr": psnr})
+        from utils.road_supervision import road_supervision_metrics
+        coverage_cfg = self.losses_dict.get("road_coverage") or {}
+        metric_dict.update(road_supervision_metrics(
+            outputs, image_infos,
+            erosion_px=int(coverage_cfg.get("erosion_px", 3)),
+            target_alpha=float(coverage_cfg.get("target_alpha", 0.95)),
+            lane_target_alpha=float(coverage_cfg.get("lane_target_alpha", 0.98)),
+        ))
         return metric_dict
 
     def get_gaussian_count(self):

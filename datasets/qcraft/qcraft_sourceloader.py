@@ -244,6 +244,10 @@ class QcraftPixelSource(ScenePixelSource):
             
         self.load_data()
 
+        if not render_only and pixel_data_config.get("load_lane_mask", False):
+            from datasets.qcraft.lane_supervision import attach_lane_masks
+            attach_lane_masks(self.camera_data, pixel_data_config)
+
     def load_ego_poses(self):
         """统一加载场景全局的自车轨迹"""
         lidar_to_world_start = np.loadtxt(

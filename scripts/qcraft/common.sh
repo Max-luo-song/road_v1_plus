@@ -31,7 +31,7 @@ lidar_type="lidar" # lidar（运动补偿前）/visual（纯视觉）
 output_root="${OUTPUT_ROOT:-/inspire/hdd/global_user/guoluosong-253108120129/chery_workspace/zhengzhehao/output}"
 config_file="configs/omnire_extended_cam_lidar.yaml"
 dataset_config="qcraft/11cams_${lidar_type}"
-extra_config_info="soft-road-bg-suppression" # 额外信息，如 depth_loss；也用于避免同日同场景输出重名
+extra_config_info="road-color-coverage" # 独立路面颜色、覆盖率及标线监督实验
 
 # 相机分组训练配置
 group_execution_mode="serial"  # serial / parallel
