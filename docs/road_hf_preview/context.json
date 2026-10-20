@@ -1,0 +1,21 @@
+{
+  "source_checkpoint": "/inspire/hdd/global_user/guoluosong-253108120129/chery_workspace/zhengzhehao/output/qcraft_20260613_102138_QCJPTDJ07384_3298_3308/20261009_lidar+traincam2_3_5_9_12_0_1_6_7_10_11road-color-coverage/group0/checkpoint_final.pth",
+  "source_frames": [
+    30,
+    40,
+    50
+  ],
+  "source_cameras": [
+    2,
+    3,
+    5,
+    9,
+    12
+  ],
+  "base_patch_radius": 6.4,
+  "base_patch_center": [
+    105.39740753173828,
+    -0.814811110496521
+  ],
+  "limitation": "CPU local-patch evidence/sampling preview using frozen checkpoint centers, not a fresh full-scene initialization or CUDA training; sparse LiDAR depth unavailable in this preview."
+}

@@ -4,9 +4,8 @@
 #
 # 使用方式：
 #   run_dir=/path/to/run bash sim_render/cam/render_novel_trajectory.sh
-#   自动使用 run_dir/group0 和 run_dir/group1 下的 checkpoint，并读取 common.sh
-#   中对应的 eval_group*_views。两个组的不同相机结果统一写入 run_dir/novel_traj。
-#   两组渲染完成后，默认合成包含全部相机的 rgbs_layout.mp4。
+#   默认读取 run_dir/group0 的 checkpoint 和 common.sh 中的 eval_group0_views。
+#   结果写入 run_dir/novel_traj，布局中未选择的相机补黑。
 #
 # 轨迹配置：
 #   novel_traj_shifts=left_1,left_2,right_1  # 便捷 token
@@ -29,8 +28,8 @@ run_dir=${run_dir:-${1:-""}}
 checkpoint_name=${checkpoint_name:-"checkpoint_final.pth"}
 experiment_output_dir=${experiment_output_dir:-""}
 
-# 分组模式默认渲染两个 group；可设为 group0 或 group1。
-render_groups=${render_groups:-"group0,group1"}
+# 默认只渲染 group0；可显式设置 render_groups=group0,group1 渲染两组。
+render_groups=${render_groups:-"group0"}
 
 # ------------------------- 轨迹 -------------------------
 novel_traj_shifts=${novel_traj_shifts:-"left_3"}
@@ -154,8 +153,8 @@ if [[ -z "${run_dir}" ]]; then
     exit 1
 fi
 
-if [[ ! -d "${run_dir}/group0" || ! -d "${run_dir}/group1" ]]; then
-    echo "[ERROR] Expected both group0/ and group1/ under: ${run_dir}" >&2
+if [[ ! -d "${run_dir}" ]]; then
+    echo "[ERROR] Run directory not found: ${run_dir}" >&2
     exit 1
 fi
 
@@ -166,10 +165,12 @@ if [[ ${#groups[@]} -eq 0 ]]; then
 fi
 
 output_root_dir=${experiment_output_dir:-"${run_dir}"}
+render_view_order=""
 for group in "${groups[@]}"; do
     group="${group// /}"
     [[ -z "${group}" ]] && continue
     group_cam_csv=$(camera_csv_for_group "${group}") || exit 1
+    render_view_order="${render_view_order:+${render_view_order},}${group_cam_csv}"
     IFS=',' read -r -a group_cam_ids <<< "${group_cam_csv}"
     run_render \
         "${run_dir}/${group}/${checkpoint_name}" \
@@ -182,7 +183,7 @@ if [[ "${save_full_layout_video}" == "true" ]]; then
     CUDA_VISIBLE_DEVICES="${render_gpu}" python tools/merge_grouped_novel_trajectory_layout.py \
         --novel_traj_dir "${output_root_dir}/novel_traj" \
         --traj_types "${render_traj_types[@]}" \
-        --view_order "${view_order}" \
+        --view_order "${render_view_order}" \
         --fps "${fps}" \
         --strict
 fi

@@ -232,7 +232,8 @@ def main(args):
             f"Resuming training from {args.resume_from}, starting at step {trainer.step}"
         )
     else:
-        trainer.init_gaussians_from_dataset(dataset=dataset)
+        trainer.init_gaussians_from_dataset(
+            dataset=dataset, initialization_output_dir=os.path.join(cfg.log_dir, "road_init"))
         logger.info(
             f"Training from scratch, initializing gaussians from dataset, starting at step {trainer.step}"
         )

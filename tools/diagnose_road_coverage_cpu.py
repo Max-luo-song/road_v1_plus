@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from PIL import Image
+from utils.road_scales import decode_road_scales
 
 
 def accumulate(means2d, conics, radii, opacity, width, height, stride):
@@ -71,9 +72,9 @@ def main():
     alpha_min = float(road.get('_opacity_alpha_min', -1))
     alpha = road['_opacities'].sigmoid().flatten()
     alpha = alpha_min + (1 - alpha_min) * alpha if alpha_min >= 0 else alpha.clamp(min=0.2)
-    scales = road['_scales'].exp()
-    scales[:, :2].clamp_(0.02, 0.08)
-    scales[:, 2:].clamp_(0.003, 0.01)
+    scales = decode_road_scales(road['_scales'], road.get('_scale_xy_bounds', (-1., -1.)))
+    saved_bounds = tuple(float(v) for v in road.get('_scale_xy_bounds', (-1., -1.)))
+    xy_min, xy_max = saved_bounds if saved_bounds[0] > 0 else (.02, .08)
     results = {}
     args.output.mkdir(parents=True, exist_ok=True)
     for name, forced_alpha, scale_multiplier in [('learned', False, 1), ('alpha_one', True, 1), ('alpha_one_xy_double', True, 2)]:
@@ -96,7 +97,7 @@ def main():
         if name == 'learned':
             local_stats = []
             raw = road['_opacities'].flatten().numpy()
-            raw_scale = road['_scales'].exp().numpy()
+            physical_scale = scales.numpy()
             center_np, conic_np, radius_np = centers[0].numpy(), conics[0].numpy(), radii[0].numpy()
             for flat_idx in np.argsort(near_roi, axis=None)[:12]:
                 iy, ix = np.unravel_index(flat_idx, near_roi.shape)
@@ -108,7 +109,7 @@ def main():
                 current = np.where(valid, a * footprint, 0)
                 potential = np.where(valid, footprint, 0)
                 neighbors = potential >= 1/255
-                local_stats.append({'pixel': [float(x), float(y)], 'alpha': float(near_roi[iy, ix]), 'potential_contributors': int(neighbors.sum()), 'fraction_neighbor_raw_below_minus14': float((raw[neighbors] < -14).mean()), 'fraction_neighbor_xy_both_clamped': float(((raw_scale[neighbors, :2] <= .02) | (raw_scale[neighbors, :2] >= .08)).all(1).mean()), 'neighbor_alpha_mean': float(a[neighbors].mean()), 'alpha_if_all_one': float(1-np.prod(1-np.minimum(.999, potential[neighbors])))})
+                local_stats.append({'pixel': [float(x), float(y)], 'alpha': float(near_roi[iy, ix]), 'potential_contributors': int(neighbors.sum()), 'fraction_neighbor_raw_below_minus14': float((raw[neighbors] < -14).mean()), 'fraction_neighbor_xy_both_near_bounds': float(((physical_scale[neighbors, :2] <= xy_min * 1.001) | (physical_scale[neighbors, :2] >= xy_max * .999)).all(1).mean()), 'neighbor_alpha_mean': float(a[neighbors].mean()), 'alpha_if_all_one': float(1-np.prod(1-np.minimum(.999, potential[neighbors])))})
             results['leaking_pixel_neighbors'] = local_stats
         print(name, results[name], flush=True)
     (args.output / 'summary.json').write_text(json.dumps({'checkpoint': str(args.checkpoint), 'frame': args.frame, 'cam': args.cam, 'left': args.left, 'stride': args.stride, 'space': 'pinhole before image distortion; bottom-left rectangle is not a road mask', 'results': results}, indent=2))

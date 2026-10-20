@@ -11,10 +11,18 @@ cd "${repo_root}"
 source scripts/qcraft/common.sh
 
 scene_id_s_e="$1"
+selected_group="${2:-group0}"
+case "${selected_group}" in
+    all|group0) ;;
+    *) echo "[ERROR] Expected group selection: all or group0" >&2; exit 1 ;;
+esac
 
 project_name="qcraft_${scene_id_s_e}"
 date_str="$(date +%Y%m%d)"
-train_view_tag="${train_group0_views//,/_}_${train_group1_views//,/_}"
+train_view_tag="${train_group0_views//,/_}"
+if [[ "${selected_group}" == "all" ]]; then
+    train_view_tag+="_${train_group1_views//,/_}"
+fi
 if [[ -n "${RUN_NAME_OVERRIDE:-}" ]]; then
     if [[ ! "${RUN_NAME_OVERRIDE}" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]; then
         echo "[ERROR] Invalid RUN_NAME_OVERRIDE: ${RUN_NAME_OVERRIDE}" >&2
@@ -30,6 +38,8 @@ run_dir="${output_root}/${project_name}/${run_name}"
 log() {
     echo "$@" >&2
 }
+
+log "[INFO] Training config: ${config_file}"
 
 if grep -qE '^[[:space:]]+lane_influence_radius:' "${config_file}"; then
     processed_scene_dir="${processed_data_root}/training/${scene_id_s_e}"
@@ -214,6 +224,18 @@ wait_parallel_jobs() {
 }
 
 run_training_stage() {
+    if [[ "${selected_group}" == "group0" ]]; then
+        log "Starting Training group 0 only on physical GPU ${group0_gpu}"
+        start_train_group \
+            0 \
+            "${group0_gpu}" \
+            "${train_group0_views}" \
+            "${group0_train_log}" \
+            pid0
+        wait_single_job "Training group 0" pid0 "${group0_train_log}"
+        return
+    fi
+
     if [ "${group_execution_mode}" = "serial" ]; then
         log "Starting serial view-group training..."
 
@@ -279,6 +301,19 @@ run_training_stage() {
 }
 
 run_evaluation_stage() {
+    if [[ "${selected_group}" == "group0" ]]; then
+        log "Starting Evaluation group 0 only on physical GPU ${group0_gpu}"
+        start_eval_group \
+            0 \
+            "${group0_gpu}" \
+            "${eval_group0_views}" \
+            "${group0_ckpt}" \
+            "${group0_eval_log}" \
+            pid0
+        wait_single_job "Evaluation group 0" pid0 "${group0_eval_log}"
+        return
+    fi
+
     if [ "${group_execution_mode}" = "serial" ]; then
         log "Starting serial view-group evaluation..."
 
@@ -356,6 +391,31 @@ trap 'cleanup_children EXIT' EXIT
 
 export PYTHONPATH="${repo_root}"
 export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-${repo_root}/.torch_extensions}"
+
+# Check CUDA before touching an existing run or invoking gsplat's JIT compiler.
+check_cuda_device() {
+    CUDA_VISIBLE_DEVICES="$1" python - "$1" <<'PY' >&2
+import os
+import sys
+import torch
+
+try:
+    if not torch.cuda.is_available() or torch.cuda.device_count() == 0:
+        raise RuntimeError("PyTorch detects no usable CUDA device")
+    torch.empty(1, device="cuda:0")
+    print("[INFO] CUDA device {}: {}".format(sys.argv[1], torch.cuda.get_device_name(0)))
+except Exception as error:
+    print("[ERROR] CUDA_VISIBLE_DEVICES={}: {}".format(os.environ.get("CUDA_VISIBLE_DEVICES"), error))
+    print("[ERROR] Check GPU allocation/driver and nvidia-smi; override with GROUP0_GPU=<available GPU ID>.")
+    sys.exit(1)
+PY
+}
+
+check_cuda_device "${group0_gpu}"
+if [[ "${selected_group}" == "all" && "${group1_gpu}" != "${group0_gpu}" ]]; then
+    check_cuda_device "${group1_gpu}"
+fi
+
 mkdir -p "${TORCH_EXTENSIONS_DIR}"
 
 if [ -d "${run_dir}" ]; then
@@ -374,11 +434,16 @@ fi
 mkdir -p "${run_dir}"
 
 log "Run directory: ${run_dir}"
+log "Selected groups: ${selected_group}"
 log "Group execution mode: ${group_execution_mode}"
+if [[ "${selected_group}" == "all" ]]; then
+    log "Training group 1: physical GPU ${group1_gpu}, views ${train_group1_views}"
+fi
 log "Training group 0: physical GPU ${group0_gpu}, views ${train_group0_views}"
-log "Training group 1: physical GPU ${group1_gpu}, views ${train_group1_views}"
+if [[ "${selected_group}" == "all" ]]; then
+    log "Evaluation group 1 views: ${eval_group1_views}"
+fi
 log "Evaluation group 0 views: ${eval_group0_views}"
-log "Evaluation group 1 views: ${eval_group1_views}"
 
 log "Preparing gsplat CUDA extension cache: ${TORCH_EXTENSIONS_DIR}"
 
@@ -387,11 +452,13 @@ CUDA_VISIBLE_DEVICES="${group0_gpu}" python -c \
     "from gsplat.cuda._backend import _C; assert _C is not None" \
     >&2
 
-group0_train_log="${run_dir}/group0_train.log"
 group1_train_log="${run_dir}/group1_train.log"
+group0_train_log="${run_dir}/group0_train.log"
 
+if [[ "${selected_group}" == "all" ]]; then
+    log "Group 1 train log: ${group1_train_log}"
+fi
 log "Group 0 train log: ${group0_train_log}"
-log "Group 1 train log: ${group1_train_log}"
 
 ################################################################################
 # Training
@@ -399,10 +466,14 @@ log "Group 1 train log: ${group1_train_log}"
 
 run_training_stage
 
-group0_ckpt="${run_dir}/group0/checkpoint_final.pth"
 group1_ckpt="${run_dir}/group1/checkpoint_final.pth"
+group0_ckpt="${run_dir}/group0/checkpoint_final.pth"
 
-for ckpt in "${group0_ckpt}" "${group1_ckpt}"; do
+checkpoints=("${group0_ckpt}")
+if [[ "${selected_group}" == "all" ]]; then
+    checkpoints+=("${group1_ckpt}")
+fi
+for ckpt in "${checkpoints[@]}"; do
     if [ ! -f "${ckpt}" ]; then
         log "[ERROR] Missing checkpoint: ${ckpt}"
         exit 1
@@ -413,11 +484,13 @@ done
 # Evaluation
 ################################################################################
 
-group0_eval_log="${run_dir}/group0_eval.log"
 group1_eval_log="${run_dir}/group1_eval.log"
+group0_eval_log="${run_dir}/group0_eval.log"
 
+if [[ "${selected_group}" == "all" ]]; then
+    log "Group 1 eval log: ${group1_eval_log}"
+fi
 log "Group 0 eval log: ${group0_eval_log}"
-log "Group 1 eval log: ${group1_eval_log}"
 
 run_evaluation_stage
 
@@ -425,11 +498,15 @@ run_evaluation_stage
 # Merge render results
 ################################################################################
 
+if [[ "${selected_group}" == "group0" ]]; then
+    # The QCraft layout leaves missing group1 camera slots black.
+    view_order="${eval_group0_views}"
+fi
 log "Merging render outputs into ${run_dir}/videos"
 
 CUDA_VISIBLE_DEVICES="${group0_gpu}" python tools/merge_view_parallel_render.py \
-    --group0_dir "${run_dir}/group0/videos_eval" \
     --group1_dir "${run_dir}/group1/videos_eval" \
+    --group0_dir "${run_dir}/group0/videos_eval" \
     --output_dir "${run_dir}/videos" \
     --view_order "${view_order}" \
     --dataset qcraft \
@@ -443,19 +520,26 @@ CUDA_VISIBLE_DEVICES="${group0_gpu}" python tools/merge_view_parallel_render.py 
 
 log "Merging metrics into ${run_dir}/metrics_eval"
 
+if [[ "${selected_group}" == "group0" ]]; then
+    cp -a "${run_dir}/group0/metrics_eval" "${run_dir}/metrics_eval"
+else
 python tools/merge_view_parallel_metrics.py \
-    --group0_metrics_dir "${run_dir}/group0/metrics_eval" \
     --group1_metrics_dir "${run_dir}/group1/metrics_eval" \
+    --group0_metrics_dir "${run_dir}/group0/metrics_eval" \
     --output_dir "${run_dir}/metrics_eval" \
-    --group0_views "${eval_group0_views}" \
     --group1_views "${eval_group1_views}" \
+    --group0_views "${eval_group0_views}" \
     >&2
+
+fi
 
 trap - INT TERM EXIT
 
 log "Done."
+if [[ "${selected_group}" == "all" ]]; then
+    log "Group 1 checkpoint: ${group1_ckpt}"
+fi
 log "Group 0 checkpoint: ${group0_ckpt}"
-log "Group 1 checkpoint: ${group1_ckpt}"
 log "Unified videos: ${run_dir}/videos"
 log "Unified metrics: ${run_dir}/metrics_eval"
 

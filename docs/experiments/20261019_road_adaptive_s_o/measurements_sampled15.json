@@ -1,0 +1,227 @@
+{
+  "runs": {
+    "old": "/inspire/hdd/global_user/guoluosong-253108120129/chery_workspace/zhengzhehao/output/qcraft_20260613_102138_QCJPTDJ07384_3298_3308/20261009_lidar+traincam2_3_5_9_12_0_1_6_7_10_11road-color-coverage",
+    "new": "/inspire/hdd/global_user/guoluosong-253108120129/chery_workspace/zhengzhehao/output/qcraft_20260613_102138_QCJPTDJ07384_3298_3308/20261019_lidar+traincam2_3_5_9_12road-adaptive-s-o"
+  },
+  "paired_original_frames_per_camera": {
+    "2": 3,
+    "3": 3,
+    "5": 3,
+    "9": 3,
+    "12": 3
+  },
+  "group0_eval": {
+    "old": {
+      "image_metrics/full/psnr": 27.89096892771095,
+      "image_metrics/full/ssim": 0.8207954126175003,
+      "image_metrics/full/lpips": 0.26544052482855446,
+      "image_metrics/full/psnr_no_ego": 27.779823769463434,
+      "image_metrics/full/ssim_no_ego": 0.8167247677090194,
+      "image_metrics/full/lpips_no_ego": 0.26123252553169174,
+      "image_metrics/full/psnr_with_ego": 27.89096892771095,
+      "image_metrics/full/ssim_with_ego": 0.8207954126175003,
+      "image_metrics/full/lpips_with_ego": 0.26544052482855446,
+      "image_metrics/full/occupied_psnr": 26.634238133285997,
+      "image_metrics/full/occupied_ssim": 0.7831195486916437,
+      "image_metrics/full/masked_psnr": 22.391346495239826,
+      "image_metrics/full/masked_ssim": 0.7250337006038456,
+      "image_metrics/full/human_psnr": 3.126927963410965,
+      "image_metrics/full/human_ssim": -0.7283345424767697,
+      "image_metrics/full/vehicle_psnr": 22.37230137638773,
+      "image_metrics/full/vehicle_ssim": 0.7239850535710021
+    },
+    "new": {
+      "image_metrics/full/psnr": 28.002622311524675,
+      "image_metrics/full/ssim": 0.8214413015529364,
+      "image_metrics/full/lpips": 0.25297487712267674,
+      "image_metrics/full/psnr_no_ego": 27.891477137864232,
+      "image_metrics/full/ssim_no_ego": 0.8169396116275979,
+      "image_metrics/full/lpips_no_ego": 0.2487615235827186,
+      "image_metrics/full/psnr_with_ego": 28.002622311524675,
+      "image_metrics/full/ssim_with_ego": 0.8214413015529364,
+      "image_metrics/full/lpips_with_ego": 0.25297487712267674,
+      "image_metrics/full/occupied_psnr": 26.746713676837945,
+      "image_metrics/full/occupied_ssim": 0.7858471285213124,
+      "image_metrics/full/masked_psnr": 22.35978500337312,
+      "image_metrics/full/masked_ssim": 0.729731235137642,
+      "image_metrics/full/human_psnr": 3.1704183250966698,
+      "image_metrics/full/human_ssim": -0.7261604185056205,
+      "image_metrics/full/vehicle_psnr": 22.331776058794276,
+      "image_metrics/full/vehicle_ssim": 0.7285444860694683
+    }
+  },
+  "original_trajectory_masked_metrics": {
+    "old": {
+      "2": {
+        "road_rgb_mae": 0.04419327017118452,
+        "lane_candidate_rgb_mae": 0.11356607972061283,
+        "lane_candidate_edge_mae": 0.07409529900946871,
+        "road_pixels": 647985,
+        "lane_candidate_pixels": 40345
+      },
+      "3": {
+        "road_rgb_mae": 0.048729809350229955,
+        "lane_candidate_rgb_mae": 0.20875530147997828,
+        "lane_candidate_edge_mae": 0.08183991496825964,
+        "road_pixels": 604687,
+        "lane_candidate_pixels": 45613
+      },
+      "5": {
+        "road_rgb_mae": 0.025859837321131826,
+        "lane_candidate_rgb_mae": 0.08267108334455563,
+        "lane_candidate_edge_mae": 0.0669190940787225,
+        "road_pixels": 590938,
+        "lane_candidate_pixels": 13111
+      },
+      "9": {
+        "road_rgb_mae": 0.025462175717343327,
+        "lane_candidate_rgb_mae": 0.07980651101071734,
+        "lane_candidate_edge_mae": 0.0585877183536577,
+        "road_pixels": 592111,
+        "lane_candidate_pixels": 13754
+      },
+      "12": {
+        "road_rgb_mae": 0.01970704183180339,
+        "lane_candidate_rgb_mae": 0.06546189567610468,
+        "lane_candidate_edge_mae": 0.04603327305573672,
+        "road_pixels": 601711,
+        "lane_candidate_pixels": 20037
+      },
+      "all": {
+        "road_rgb_mae": 0.03302750386482418,
+        "lane_candidate_rgb_mae": 0.13244767712304953,
+        "lane_candidate_edge_mae": 0.06971740696737586,
+        "road_pixels": 3037432,
+        "lane_candidate_pixels": 132860
+      }
+    },
+    "new": {
+      "2": {
+        "road_rgb_mae": 0.042568604802290945,
+        "lane_candidate_rgb_mae": 0.10809769431282144,
+        "lane_candidate_edge_mae": 0.07604158450963823,
+        "road_pixels": 647985,
+        "lane_candidate_pixels": 40345
+      },
+      "3": {
+        "road_rgb_mae": 0.04862136933808317,
+        "lane_candidate_rgb_mae": 0.2074979823460417,
+        "lane_candidate_edge_mae": 0.08255610676498694,
+        "road_pixels": 604687,
+        "lane_candidate_pixels": 45613
+      },
+      "5": {
+        "road_rgb_mae": 0.024222066859964583,
+        "lane_candidate_rgb_mae": 0.08490271179511122,
+        "lane_candidate_edge_mae": 0.06622029017161697,
+        "road_pixels": 590938,
+        "lane_candidate_pixels": 13111
+      },
+      "9": {
+        "road_rgb_mae": 0.0254025584347255,
+        "lane_candidate_rgb_mae": 0.06691966154590255,
+        "lane_candidate_edge_mae": 0.05633516522593607,
+        "road_pixels": 592111,
+        "lane_candidate_pixels": 13754
+      },
+      "12": {
+        "road_rgb_mae": 0.02062296021132861,
+        "lane_candidate_rgb_mae": 0.0701003771684493,
+        "lane_candidate_edge_mae": 0.04951010239878932,
+        "road_pixels": 601711,
+        "lane_candidate_pixels": 20037
+      },
+      "all": {
+        "road_rgb_mae": 0.03251050998965779,
+        "lane_candidate_rgb_mae": 0.12994114618676086,
+        "lane_candidate_edge_mae": 0.07072332101190809,
+        "road_pixels": 3037432,
+        "lane_candidate_pixels": 132860
+      }
+    }
+  },
+  "checkpoint": {
+    "old": {
+      "count": 1490106,
+      "alpha_floor": 0.2,
+      "scale_bounds": [
+        -1.0,
+        -1.0
+      ],
+      "xy_small_axis_quantiles_m": {
+        "p01": 0.019999999552965164,
+        "p10": 0.019999999552965164,
+        "p50": 0.019999999552965164,
+        "p90": 0.07999999821186066,
+        "p99": 0.07999999821186066
+      },
+      "xy_large_axis_quantiles_m": {
+        "p01": 0.019999999552965164,
+        "p10": 0.019999999552965164,
+        "p50": 0.07448817044496536,
+        "p90": 0.07999999821186066,
+        "p99": 0.07999999821186066
+      },
+      "alpha_quantiles": {
+        "p01": 0.20000000298023224,
+        "p10": 0.20000000298023224,
+        "p50": 0.20133519172668457,
+        "p90": 1.0,
+        "p99": 1.0
+      },
+      "fraction_any_xy_below_2cm": 0.0,
+      "fraction_both_xy_below_2cm": 0.0,
+      "fraction_alpha_below_point2": 0.0,
+      "fraction_alpha_below_point05": 0.0,
+      "fraction_xy_large_at_least7p9cm": 0.49937185676723667,
+      "mean_alpha": 0.5120679140090942,
+      "mean_xy_area_proxy": 0.0019236645894125104,
+      "mean_alpha_xy_area_proxy": 0.0012924602488055825,
+      "step": 40000
+    },
+    "new": {
+      "count": 1492330,
+      "alpha_floor": 0.01,
+      "scale_bounds": [
+        0.01,
+        0.08
+      ],
+      "xy_small_axis_quantiles_m": {
+        "p01": 0.010008800774812698,
+        "p10": 0.010301255062222481,
+        "p50": 0.020148719660937786,
+        "p90": 0.06570813059806827,
+        "p99": 0.07983116060495377
+      },
+      "xy_large_axis_quantiles_m": {
+        "p01": 0.011003165617585181,
+        "p10": 0.023021708615124224,
+        "p50": 0.060101378709077835,
+        "p90": 0.07968875020742416,
+        "p99": 0.07999692112207413
+      },
+      "alpha_quantiles": {
+        "p01": 0.010000001639127731,
+        "p10": 0.010001393966376781,
+        "p50": 0.13939699530601501,
+        "p90": 1.0,
+        "p99": 1.0
+      },
+      "fraction_any_xy_below_2cm": 0.49689009803461703,
+      "fraction_both_xy_below_2cm": 0.07503099180476168,
+      "fraction_alpha_below_point2": 0.521264063578431,
+      "fraction_alpha_below_point05": 0.43230250681819704,
+      "fraction_xy_large_at_least7p9cm": 0.15854000120616754,
+      "mean_alpha": 0.4415675401687622,
+      "mean_xy_area_proxy": 0.0018253836315125227,
+      "mean_alpha_xy_area_proxy": 0.0011212839744985104,
+      "step": 40000
+    }
+  },
+  "limitations": [
+    "group0 only; old merged 11-camera metrics are not used",
+    "original-trajectory masks from processed road/dynamic/ego/sky; eroded 3px",
+    "lane masks are RGB candidates, not annotated labels",
+    "novel trajectory has no target RGB or alpha outputs; visual black patches cannot be identified as transparency holes from RGB alone"
+  ]
+}

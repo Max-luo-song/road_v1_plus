@@ -16,7 +16,10 @@ source scripts/qcraft/common.sh
 scene_id="$1"
 clip_start_time="${2:-0}"
 clip_end_time="${3:-}"
-mode="${4:-1}"          # 0=本地 parsed 数据完整流程, 1=在线完整流程, 2=已有 processed 数据仅训练
+# 默认跳过所有预处理，scene_id 直接填写 processed_data_root/training 下的目录名。
+# 用法: bash scripts/qcraft/pipeline.sh <processed_scene_id>
+# 显式传入 mode=0/1 仍可执行原来的完整预处理流程。
+mode="${4:-2}"          # 0=本地 parsed 数据完整流程, 1=在线完整流程, 2=已有 processed 数据仅训练
 label_type="${5:-pred}"
 version="${6:-26.5.20.1}"
 enable_difix="${7:-0}"   # 0=关闭, 1=开启 DiFix 渐进式蒸馏
@@ -183,15 +186,14 @@ fi
 
 # step 6: camera group training
 echo "=========================================="
-echo "✓ 开始相机分组训练"
+echo "✓ 开始相机训练（仅 group0）"
 echo "=========================================="
 
-run_dir="$(bash "${work_root}/scripts/qcraft/group_training.sh" "${scene_id_s_e}")" || exit 1
+run_dir="$(bash "${work_root}/scripts/qcraft/group_training.sh" "${scene_id_s_e}" group0)" || exit 1
 
 echo "Run directory: ${run_dir}"
 
 check_file_exists "${run_dir}/group0/checkpoint_final.pth" "group0 checkpoint_final.pth" || exit 1
-check_file_exists "${run_dir}/group1/checkpoint_final.pth" "group1 checkpoint_final.pth" || exit 1
 
 echo "=========================================="
 echo "✓ 步骤结束: 相机分组训练"
@@ -227,15 +229,13 @@ check_dir_not_empty "$lidar_cpt_path" "lidar_cpt" || exit 1
 # step 8: DiFix progressive distillation（enable_difix=1 时执行）
 if [[ "${enable_difix}" == "1" ]]; then
     echo "=========================================="
-    echo "✓ 开始 DiFix 渐进式蒸馏（分组串行）"
+    echo "✓ 开始 DiFix 渐进式蒸馏（仅 group0）"
     echo "  novel_traj_shifts: ${novel_traj_shifts}"
     echo "  output_dir: ${run_dir}"
     echo "=========================================="
 
     group_0_difix_ckpt_path="${run_dir}/group0/checkpoint_final.pth"
-    group_1_difix_ckpt_path="${run_dir}/group1/checkpoint_final.pth"
     group_0_original_view_ckpt_path="${run_dir}/group0/checkpoint_final_original_view.pth"
-    group_1_original_view_ckpt_path="${run_dir}/group1/checkpoint_final_original_view.pth"
 
     # If an original-view backup exists, restore it before DiFix so repeated runs
     # always start from the non-distilled model.
@@ -244,16 +244,10 @@ if [[ "${enable_difix}" == "1" ]]; then
         rm -f "${group_0_difix_ckpt_path}" || exit 1
         cp -p "${group_0_original_view_ckpt_path}" "${group_0_difix_ckpt_path}" || exit 1
     fi
-    if [ -f "${group_1_original_view_ckpt_path}" ]; then
-        echo "[INFO] Restoring group1 original-view checkpoint to checkpoint_final.pth"
-        rm -f "${group_1_difix_ckpt_path}" || exit 1
-        cp -p "${group_1_original_view_ckpt_path}" "${group_1_difix_ckpt_path}" || exit 1
-    fi
 
-    if [ ! -f "${group_0_difix_ckpt_path}" ] || [ ! -f "${group_1_difix_ckpt_path}" ]; then
-        echo "[ERROR] group0 or group1 3DGS checkpoints not found"
+    if [ ! -f "${group_0_difix_ckpt_path}" ]; then
+        echo "[ERROR] group0 3DGS checkpoint not found"
         echo "  expected: ${group_0_difix_ckpt_path}"
-        echo "  expected: ${group_1_difix_ckpt_path}"
         exit 1
     fi
 
@@ -264,7 +258,6 @@ if [[ "${enable_difix}" == "1" ]]; then
         "${novel_distill_repeat}" \
         "${original_distill_repeat}") || exit 1
     group_0_difix_final_ckpt_path="${run_dir}/group0/checkpoint_final_${difix_ckpt_suffix}.pth"
-    group_1_difix_final_ckpt_path="${run_dir}/group1/checkpoint_final_${difix_ckpt_suffix}.pth"
 
     source /opt/conda/etc/profile.d/conda.sh && conda activate main
     cd "${work_root}"
@@ -286,26 +279,9 @@ if [[ "${enable_difix}" == "1" ]]; then
         exit 1
     fi
 
-    # group 1 difix training
-    env \
-        ckpt_path="${group_1_difix_ckpt_path}" \
-        experiment_output_dir="${run_dir}/group1" \
-        difix_group=group1 \
-        novel_traj_shifts="${novel_traj_shifts}" \
-        novel_distill_repeat="${novel_distill_repeat}" \
-        original_distill_repeat="${original_distill_repeat}" \
-        pipeline_gpu="${gpu}" \
-        bash sim_render/cam/render_novel_trajectory_with_difix.sh
-
-    if [ $? -ne 0 ]; then
-        echo "[ERROR] group 1 DiFix distillation failed"
-        exit 1
-    fi
-
-    if [ ! -f "${group_0_difix_final_ckpt_path}" ] || [ ! -f "${group_1_difix_final_ckpt_path}" ]; then
+    if [ ! -f "${group_0_difix_final_ckpt_path}" ]; then
         echo "[ERROR] DiFix final checkpoint not found:"
         echo "  ${group_0_difix_final_ckpt_path}"
-        echo "  ${group_1_difix_final_ckpt_path}"
         exit 1
     fi
 
@@ -315,18 +291,9 @@ if [[ "${enable_difix}" == "1" ]]; then
     else
         echo "[INFO] Keep existing original-view checkpoint: ${group_0_original_view_ckpt_path}"
     fi
-    if [ ! -f "${group_1_original_view_ckpt_path}" ]; then
-        cp -p "${group_1_difix_ckpt_path}" "${group_1_original_view_ckpt_path}" || exit 1
-        echo "[INFO] Original checkpoint backed up to: ${group_1_original_view_ckpt_path}"
-    else
-        echo "[INFO] Keep existing original-view checkpoint: ${group_1_original_view_ckpt_path}"
-    fi
     rm -f "${group_0_difix_ckpt_path}" || exit 1
     cp -f "${group_0_difix_final_ckpt_path}" "${group_0_difix_ckpt_path}" || exit 1
-    rm -f "${group_1_difix_ckpt_path}" || exit 1
-    cp -f "${group_1_difix_final_ckpt_path}" "${group_1_difix_ckpt_path}" || exit 1
     echo "[INFO] DiFix checkpoint promoted to: ${group_0_difix_ckpt_path}"
-    echo "[INFO] DiFix checkpoint promoted to: ${group_1_difix_ckpt_path}"
 
     echo "=========================================="
     echo "✓ 步骤结束: DiFix 渐进式蒸馏"

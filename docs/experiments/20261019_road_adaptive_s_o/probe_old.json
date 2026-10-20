@@ -1,0 +1,623 @@
+{
+  "checkpoint": "/inspire/hdd/global_user/guoluosong-253108120129/chery_workspace/zhengzhehao/output/qcraft_20260613_102138_QCJPTDJ07384_3298_3308/20261009_lidar+traincam2_3_5_9_12_0_1_6_7_10_11road-color-coverage/group0/checkpoint_final.pth",
+  "limitations": "Probe Road/Background RGB compositing at selected novel-view pixels on CPU.\n\nApproximation: excludes dynamic classes, Sky and appearance affine; reports\nremaining transmittance so omitted contributions remain explicit. Uses installed\ngsplat PyTorch projection/SH, alpha cutoff, depth ordering and early termination.\n",
+  "pixels": [
+    {
+      "pixel": [
+        550.5,
+        490.5
+      ],
+      "scene": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.580455063304201,
+            0.5783990660058378,
+            0.589511119866473
+          ],
+          "remaining_transmittance": 0.1782667900830076,
+          "class_weights": {
+            "RoadNodes": 0.5123130741467729,
+            "Background": 0.30942013577021943
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.44177539264903176,
+              0.44115017616419844,
+              0.45122615183057896
+            ],
+            "Background": [
+              0.1386796706551693,
+              0.13724888984163924,
+              0.1382849680358942
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8623152813048595,
+              0.8610949015870969,
+              0.8807625153468306
+            ],
+            "Background": [
+              0.44819213303608385,
+              0.4435680615936468,
+              0.4469165126945292
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.7825800827391127,
+            0.7823743951577131,
+            0.8080248560703991
+          ],
+          "remaining_transmittance": 0.038244080023135285,
+          "class_weights": {
+            "RoadNodes": 0.8953751407657985,
+            "Background": 0.06638077921106643
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.7528287397119073,
+              0.7529300015959846,
+              0.7783581897154438
+            ],
+            "Background": [
+              0.02975134302720519,
+              0.029444393561728583,
+              0.029666666354955316
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8407970083556555,
+              0.840910102721879,
+              0.869309582405569
+            ],
+            "Background": [
+              0.4481921330360838,
+              0.4435680615936468,
+              0.4469165126945293
+            ]
+          }
+        }
+      },
+      "isolated_road": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.44177539264903176,
+            0.44115017616419844,
+            0.45122615183057896
+          ],
+          "remaining_transmittance": 0.48768692585322715,
+          "class_weights": {
+            "RoadNodes": 0.5123130741467729,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.44177539264903176,
+              0.44115017616419844,
+              0.45122615183057896
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8623152813048595,
+              0.8610949015870969,
+              0.8807625153468306
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.7528287397119073,
+            0.7529300015959846,
+            0.7783581897154438
+          ],
+          "remaining_transmittance": 0.10462485923420173,
+          "class_weights": {
+            "RoadNodes": 0.8953751407657985,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.7528287397119073,
+              0.7529300015959846,
+              0.7783581897154438
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8407970083556555,
+              0.840910102721879,
+              0.869309582405569
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    },
+    {
+      "pixel": [
+        500.5,
+        400.5
+      ],
+      "scene": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.4866168675793772,
+            0.4809999328737765,
+            0.4927104635780272
+          ],
+          "remaining_transmittance": 0.1852237808580146,
+          "class_weights": {
+            "RoadNodes": 0.6003109772400212,
+            "Background": 0.21446524190196425
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.35965288760186626,
+              0.3581926461718561,
+              0.3697503151406317
+            ],
+            "Background": [
+              0.12696397997751097,
+              0.1228072867019205,
+              0.12296014843739547
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.5991109628802721,
+              0.5966784879041793,
+              0.6159312908795854
+            ],
+            "Background": [
+              0.59200259609223,
+              0.5726209320112479,
+              0.5733336896316404
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.590490975772783,
+            0.5932465974277854,
+            0.6149661373400401
+          ],
+          "remaining_transmittance": 0.008107617756089291,
+          "class_weights": {
+            "RoadNodes": 0.9174977676364999,
+            "Background": 0.07439461460741058
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.5345535101409468,
+              0.5397463835150109,
+              0.5609431117105926
+            ],
+            "Background": [
+              0.055937465631836145,
+              0.0535002139127746,
+              0.05402302562944744
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.582621047153032,
+              0.5882808684160756,
+              0.6113836256578562
+            ],
+            "Background": [
+              0.7519020822545415,
+              0.7191409511979022,
+              0.7261684990846919
+            ]
+          }
+        }
+      },
+      "isolated_road": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.3787211104488922,
+            0.37709408308104386,
+            0.3897828578400258
+          ],
+          "remaining_transmittance": 0.3630971291452327,
+          "class_weights": {
+            "RoadNodes": 0.6369028708547675,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.3787211104488922,
+              0.37709408308104386,
+              0.3897828578400258
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.5946293034299286,
+              0.5920747108188689,
+              0.6119973322100282
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.5670877215967848,
+            0.5727694167015704,
+            0.5964500759116154
+          ],
+          "remaining_transmittance": 0.015893492281639467,
+          "class_weights": {
+            "RoadNodes": 0.9841065077183604,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.5670877215967848,
+              0.5727694167015704,
+              0.5964500759116154
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.5762462875198042,
+              0.5820197429946172,
+              0.6060828489941379
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    },
+    {
+      "pixel": [
+        420.5,
+        490.5
+      ],
+      "scene": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.9352201662334163,
+            0.9343088852896566,
+            0.931085549150277
+          ],
+          "remaining_transmittance": 0.04241528003192774,
+          "class_weights": {
+            "RoadNodes": 0.9265645113005976,
+            "Background": 0.031020208667474538
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.9265471193324885,
+              0.926497200668161,
+              0.923007444508091
+            ],
+            "Background": [
+              0.00867304690092772,
+              0.007811684621495612,
+              0.008078104642185998
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.9999812296198516,
+              0.9999273546184689,
+              0.9961610155049931
+            ],
+            "Background": [
+              0.2795934416141316,
+              0.2518256632388923,
+              0.26041425861380785
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.9642530991016836,
+            0.9637104556030857,
+            0.9490972079790614
+          ],
+          "remaining_transmittance": 0.023405659479272627,
+          "class_weights": {
+            "RoadNodes": 0.9594767253476021,
+            "Background": 0.017117615173125426
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.959467126163203,
+              0.9593998008090453,
+              0.9446395369145154
+            ],
+            "Background": [
+              0.004785972938480417,
+              0.004310654794040439,
+              0.0044576710645459275
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.9999899953962972,
+              0.9999198265715836,
+              0.9845361663903713
+            ],
+            "Background": [
+              0.2795934416141316,
+              0.25182566323889244,
+              0.26041425861380796
+            ]
+          }
+        }
+      },
+      "isolated_road": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.9265471193324885,
+            0.926497200668161,
+            0.923007444508091
+          ],
+          "remaining_transmittance": 0.07343548869940228,
+          "class_weights": {
+            "RoadNodes": 0.9265645113005976,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.9265471193324885,
+              0.926497200668161,
+              0.923007444508091
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.9999812296198516,
+              0.9999273546184689,
+              0.9961610155049931
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.959467126163203,
+            0.9593998008090453,
+            0.9446395369145154
+          ],
+          "remaining_transmittance": 0.04052327465239806,
+          "class_weights": {
+            "RoadNodes": 0.9594767253476021,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.959467126163203,
+              0.9593998008090453,
+              0.9446395369145154
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.9999899953962972,
+              0.9999198265715836,
+              0.9845361663903713
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    },
+    {
+      "pixel": [
+        700.5,
+        340.5
+      ],
+      "scene": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.6501199884266322,
+            0.6500450423474319,
+            0.6605850859638704
+          ],
+          "remaining_transmittance": 0.2144371961024649,
+          "class_weights": {
+            "RoadNodes": 0.7614097935848455,
+            "Background": 0.02415301031268975
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.6402175464867113,
+              0.6399782517490821,
+              0.6504694973431442
+            ],
+            "Background": [
+              0.009902441939920969,
+              0.010066790598349825,
+              0.010115588620726356
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8408317726942535,
+              0.8405174941813616,
+              0.8542962053070322
+            ],
+            "Background": [
+              0.40998789847401856,
+              0.41679237776256955,
+              0.4188127479667297
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.8127963515138817,
+            0.8151110241580689,
+            0.8440568610904048
+          ],
+          "remaining_transmittance": 0.0038638943507157152,
+          "class_weights": {
+            "RoadNodes": 0.9957007095786071,
+            "Background": 0.0004353960706773675
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.8126178236701851,
+              0.8149295395692052,
+              0.8438745002945267
+            ],
+            "Background": [
+              0.00017852784369668299,
+              0.0001814845888637201,
+              0.00018236079587814633
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8161265888964717,
+              0.8184482864475345,
+              0.8475182272910751
+            ],
+            "Background": [
+              0.4100354957704103,
+              0.4168264279036221,
+              0.4188388645640244
+            ]
+          }
+        }
+      },
+      "isolated_road": {
+        "learned": {
+          "rgb_before_sky_and_affine": [
+            0.6402175464867113,
+            0.6399782517490821,
+            0.6504694973431442
+          ],
+          "remaining_transmittance": 0.2385902064151547,
+          "class_weights": {
+            "RoadNodes": 0.7614097935848455,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.6402175464867113,
+              0.6399782517490821,
+              0.6504694973431442
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8408317726942535,
+              0.8405174941813616,
+              0.8542962053070322
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "road_alpha_one": {
+          "rgb_before_sky_and_affine": [
+            0.8126179320391086,
+            0.8149296437701871,
+            0.8438746124404252
+          ],
+          "remaining_transmittance": 0.004299101869729286,
+          "class_weights": {
+            "RoadNodes": 0.995700898130271,
+            "Background": 0.0
+          },
+          "class_rgb_contributions": {
+            "RoadNodes": [
+              0.8126179320391086,
+              0.8149296437701871,
+              0.8438746124404252
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "class_weighted_colors": {
+            "RoadNodes": [
+              0.8161265431868587,
+              0.8184482361123341,
+              0.8475181794302431
+            ],
+            "Background": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "analysis_note": "Exploratory pinhole CPU approximation only. Excludes dynamic classes, Sky, exposure affine and camera refinement. Raw predicted colors do not match saved RGB closely enough for pixel-level causal attribution; not used in report conclusions."
+}

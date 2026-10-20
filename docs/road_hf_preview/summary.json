@@ -1,0 +1,13 @@
+{
+  "base_points": 65536,
+  "views": 15,
+  "eligible_anchors": 5779,
+  "proposed_points": 16191,
+  "added_points": 13540,
+  "budget": 16384,
+  "extra_ratio": 0.20660400390625,
+  "base_spacing": 0.05,
+  "detail_spacing": 0.025,
+  "min_support_views": 3,
+  "min_support_ratio": 0.35
+}

@@ -76,6 +76,7 @@ class SingleTrainer(BasicTrainer):
     def init_gaussians_from_dataset(
         self,
         dataset: DrivingDataset,
+        initialization_output_dir=None,
     ) -> None:
         for class_name in self.gaussian_classes:
             model_cfg = self.model_config[class_name]

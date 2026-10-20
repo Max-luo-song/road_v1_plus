@@ -9,6 +9,7 @@ from pytorch3d.ops import knn_points
 
 from models.gaussians.basics import *
 from utils.opacity import bounded_logit, bounded_sigmoid
+from utils.road_scales import decode_road_scales, encode_road_scales
 
 logger = logging.getLogger()
 
@@ -47,6 +48,18 @@ class RoadNodes(nn.Module):
         self.device = device
         self.ball_gaussians=self.ctrl_cfg.get("ball_gaussians", False)
         self.gaussian_2d = self.ctrl_cfg.get("gaussian_2d", False)
+        smooth_xy = self.ctrl_cfg.get("smooth_xy_scale", False)
+        bounds = (-1., -1.)
+        if smooth_xy:
+            if self.ball_gaussians or self.gaussian_2d:
+                raise ValueError("smooth_xy_scale requires ordinary 3D RoadNodes")
+            bounds = (float(self.ctrl_cfg.get("scale_xy_min", .01)),
+                      float(self.ctrl_cfg.get("scale_xy_max", .08)))
+            if not 0 < bounds[0] < bounds[1]:
+                raise ValueError("Road XY scale bounds must satisfy 0 < min < max")
+        self.register_buffer("_scale_xy_bounds", torch.tensor(
+            bounds, dtype=torch.float64, device=device))
+        self._scale_xy_limits = bounds
         
         # for evaluation
         self.in_test_set = False
@@ -67,6 +80,7 @@ class RoadNodes(nn.Module):
         self._features_dc = torch.zeros(1, 3, device=self.device)
         self._features_rest = torch.zeros(1, num_sh_bases(self.sh_degree) - 1, 3, device=self.device)
         self._lane_mask = None
+        self.register_buffer("_hf_detail_mask", torch.zeros(1, dtype=torch.bool, device=device))
         
     @property
     def sh_degree(self):
@@ -77,6 +91,9 @@ class RoadNodes(nn.Module):
         init_means: torch.Tensor,
         init_colors: torch.Tensor,
         lane_samples: Dict[str, torch.Tensor] = None,
+        road_cameras=None,
+        road_train_frames=None,
+        initialization_output_dir=None,
     ) -> bool:
         if init_means.numel() == 0 or init_colors.numel() == 0:
             logger.warning(f"RoadNodes initialization skipped: empty input point cloud for {self.class_prefix}")
@@ -136,6 +153,21 @@ class RoadNodes(nn.Module):
         resampled_means = torch.cat(resampled_means_list, dim=0)
         resampled_colors = torch.cat(resampled_colors_list, dim=0)
 
+        base_count = len(resampled_means)
+        hf_cfg = self.init_cfg.get("high_frequency", {})
+        if hf_cfg.get("enabled", False):
+            if self.ball_gaussians or self.gaussian_2d or not self.ctrl_cfg.get("smooth_xy_scale", False):
+                raise ValueError("HF road initialization requires ordinary 3D RoadNodes with smooth_xy_scale")
+            if self.ctrl_cfg.get("edge_split_start") is not None or self.ctrl_cfg.get("edge_split_step") is not None:
+                raise ValueError("HF fixed-grid initialization requires training-time road splitting disabled")
+            from utils.road_high_frequency import initialize_high_frequency_road
+            extra_means, extra_colors, self.hf_initialization_stats = initialize_high_frequency_road(
+                resampled_means, resampled_colors, road_cameras, road_train_frames,
+                hf_cfg, output_dir=initialization_output_dir)
+            resampled_means = torch.cat((resampled_means, extra_means))
+            resampled_colors = torch.cat((resampled_colors, extra_colors))
+        self._hf_detail_mask = torch.arange(len(resampled_means), device=self.device) >= base_count
+
         self._means = Parameter(resampled_means)
         num_points = resampled_means.shape[0]
         
@@ -167,11 +199,17 @@ class RoadNodes(nn.Module):
                 "lane_scale_perpendicular", 0.02
             )
 
+        if self._hf_detail_mask.any():
+            detail_scale = float(hf_cfg.get("detail_scale", .015))
+            if not self._scale_xy_limits[0] < detail_scale < self._scale_xy_limits[1]:
+                raise ValueError("HF detail_scale must be strictly inside XY scale bounds")
+            base_scale[self._hf_detail_mask, :2] = detail_scale
+
         if self.ball_gaussians:
             # 如果是球形，取最大值
             self._scales = Parameter(torch.log(fixed_scale_tensor))
         else:
-            self._scales = Parameter(torch.log(base_scale))
+            self._scales = Parameter(encode_road_scales(base_scale, self._scale_xy_limits))
 
         # 旋转初始化：w=1, 意味着高斯主轴对齐世界坐标轴 (配合你压缩 Z 的策略，正好贴合路面)
         unit_quats = torch.zeros((num_points, 4), dtype=torch.float, device=self.device)
@@ -223,7 +261,39 @@ class RoadNodes(nn.Module):
             ))
         else:
             self._opacities = Parameter(torch.logit(0.2 * torch.ones(num_points, 1, device=self.device)))
+        if self._hf_detail_mask.any():
+            detail_opacity = float(hf_cfg.get("detail_opacity", .1))
+            alpha_floor = float(self.reg_cfg.get("alpha_min", self.reg_cfg.get("lowest_opacity", 0)))
+            if not alpha_floor < detail_opacity < 1:
+                raise ValueError("HF detail_opacity must exceed the configured opacity floor")
+            with torch.no_grad():
+                self._opacities[self._hf_detail_mask] = self._opacity_to_raw(
+                    self._opacities.new_full((int(self._hf_detail_mask.sum()), 1), detail_opacity))
+        self._register_hf_gradient_hooks()
         return False
+
+    def _register_hf_gradient_hooks(self):
+        """Progressively unlock detail points, including under Adam normalization."""
+        warmup = int(self.init_cfg.get("high_frequency", {}).get("detail_warmup_steps", 0))
+        if warmup <= 0 or not self._hf_detail_mask.any():
+            return
+
+        # A scalar gradient multiplier is largely canceled by Adam. Instead,
+        # unlock a growing subset of detail points with exact zero gradients
+        # for those not yet active. Base points are always active.
+        activation = torch.zeros_like(self._hf_detail_mask, dtype=torch.long)
+        count = int(self._hf_detail_mask.sum())
+        activation[self._hf_detail_mask] = torch.ceil(
+            torch.arange(1, count + 1, device=self.device) * (warmup / count)).long()
+
+        def detail_gradient(grad):
+            if self.step + 1 >= warmup:
+                return grad
+            multiplier = (activation <= self.step + 1).to(grad)
+            return grad * multiplier.reshape([-1] + [1] * (grad.ndim - 1))
+
+        for parameter in (self._features_dc, self._features_rest, self._scales, self._opacities):
+            parameter.register_hook(detail_gradient)
     
     @property
     def colors(self):
@@ -255,12 +325,7 @@ class RoadNodes(nn.Module):
                 scaling = torch.cat([scaling[..., :2], torch.zeros_like(scaling[..., :1])], dim=-1)
                 return scaling
             else:
-                raw_scale = torch.exp(self._scales)
-                # 分别限制XY和Z
-                scale_xy = torch.clamp(raw_scale[..., :2], min=0.02, max=0.08)
-                scale_z = torch.clamp(raw_scale[..., 2:3], min=0.003, max=0.01)
-                return torch.cat([scale_xy, scale_z], dim=-1)
-                # return torch.exp(self._scales)
+                return decode_road_scales(self._scales, self._scale_xy_limits)
     @property
     def get_opacity(self):
         alpha_min = self.reg_cfg.get("alpha_min", None)
@@ -331,8 +396,13 @@ class RoadNodes(nn.Module):
         child_means = parent_means[:, None].repeat(1, 4, 1)
         child_means[:, :, :2] += offsets
 
-        child_scales = self._scales.detach()[split_mask, None].repeat(1, 4, 1)
-        child_scales[:, :, :2] -= math.log(2.0)
+        if self._scale_xy_limits[0] > 0:
+            child_scales = parent_scales[:, None].repeat(1, 4, 1)
+            child_scales[:, :, :2] /= 2.0
+            child_scales = encode_road_scales(child_scales, self._scale_xy_limits)
+        else:
+            child_scales = self._scales.detach()[split_mask, None].repeat(1, 4, 1)
+            child_scales[:, :, :2] -= math.log(2.0)
 
         self._means.data[split_mask] = child_means[:, 0]
         self._scales.data[split_mask] = child_scales[:, 0]
@@ -489,8 +559,9 @@ class RoadNodes(nn.Module):
         culls = (self.get_opacity.data < self.ctrl_cfg.cull_alpha_thresh).squeeze()
         if self.step > self.ctrl_cfg.reset_alpha_interval:
             # cull huge ones
+            physical_scales = self.get_scaling if self._scale_xy_limits[0] > 0 else self._scales.exp()
             toobigs = (
-                torch.exp(self._scales).max(dim=-1).values > 
+                physical_scales.max(dim=-1).values >
                 self.ctrl_cfg.cull_scale_thresh * self.scene_scale
             ).squeeze()
             culls = culls | toobigs
@@ -533,8 +604,12 @@ class RoadNodes(nn.Module):
         new_opacities = self._opacities[split_mask].repeat(samps, 1)
         # step 4, sample new scales
         size_fac = 1.6
-        new_scales = torch.log(torch.exp(self._scales[split_mask]) / size_fac).repeat(samps, 1)
-        self._scales[split_mask] = torch.log(torch.exp(self._scales[split_mask]) / size_fac)
+        if self._scale_xy_limits[0] > 0:
+            smaller = encode_road_scales(self.get_scaling[split_mask] / size_fac, self._scale_xy_limits)
+        else:
+            smaller = torch.log(torch.exp(self._scales[split_mask]) / size_fac)
+        new_scales = smaller.repeat(samps, 1)
+        self._scales[split_mask] = smaller
         # step 5, sample new quats
         new_quats = self._quats[split_mask].repeat(samps, 1)
         return new_means, new_feature_dc, new_feature_rest, new_opacities, new_scales, new_quats
@@ -633,6 +708,14 @@ class RoadNodes(nn.Module):
     
     def load_state_dict(self, state_dict: Dict, **kwargs) -> str:
         state_dict = state_dict.copy()
+        saved_bounds = state_dict.get("_scale_xy_bounds", (-1., -1.))
+        if tuple(float(v) for v in saved_bounds) != self._scale_xy_limits:
+            if self.ball_gaussians or self.gaussian_2d:
+                raise ValueError("Cannot convert smooth XY scales to ball/2D RoadNodes")
+            physical = decode_road_scales(state_dict["_scales"], saved_bounds)
+            state_dict["_scales"] = encode_road_scales(physical, self._scale_xy_limits)
+            logger.info("Converted RoadNodes checkpoint XY scale parameterization")
+        state_dict["_scale_xy_bounds"] = self._scale_xy_bounds.clone()
         saved_alpha_min = float(state_dict.get("_opacity_alpha_min", -1.0))
         current_alpha_min = float(self._opacity_alpha_min)
         if saved_alpha_min != current_alpha_min:
@@ -641,13 +724,15 @@ class RoadNodes(nn.Module):
                        if saved_alpha_min >= 0.0 else torch.sigmoid(raw))
             if saved_alpha_min < 0.0:
                 # Legacy checkpoints used the configured hard opacity floor.
-                lowest = self.reg_cfg.get("lowest_opacity", None)
+                lowest = self.reg_cfg.get("legacy_opacity_floor", self.reg_cfg.get("lowest_opacity", None))
                 if lowest is not None:
                     opacity = opacity.clamp(min=float(lowest))
             state_dict["_opacities"] = self._opacity_to_raw(opacity)
             logger.info("Converted RoadNodes checkpoint opacity parameterization")
         state_dict["_opacity_alpha_min"] = self._opacity_alpha_min.clone()
         N = state_dict["_means"].shape[0]
+        state_dict.setdefault("_hf_detail_mask", torch.zeros(N, dtype=torch.bool, device=self.device))
+        self._hf_detail_mask = torch.zeros(N, dtype=torch.bool, device=self.device)
         self._means = Parameter(torch.zeros((N,) + self._means.shape[1:], device=self.device))
         self._scales = Parameter(torch.zeros((N,) + self._scales.shape[1:], device=self.device))
         self._quats = Parameter(torch.zeros((N,) + self._quats.shape[1:], device=self.device))
@@ -655,6 +740,10 @@ class RoadNodes(nn.Module):
         self._features_rest = Parameter(torch.zeros((N,) + self._features_rest.shape[1:], device=self.device))
         self._opacities = Parameter(torch.zeros((N,) + self._opacities.shape[1:], device=self.device))
         msg = super().load_state_dict(state_dict, **kwargs)
+        self._register_hf_gradient_hooks()
+        if self.init_cfg.get("high_frequency", {}).get("enabled", False) and not self._hf_detail_mask.any():
+            logger.warning("Checkpoint has no HF detail points. Resuming preserves its centers; "
+                           "edge-guided initialization only runs when training from scratch.")
         return msg
     
     def export_gaussians_to_ply(self, alpha_thresh: float) -> Dict:

@@ -264,13 +264,43 @@ model:
         lr_final: 0.0001
   RoadNodes:
     type: models.nodes.RoadNodes
+    ctrl:
+      smooth_xy_scale: true
+      scale_xy_min: 0.01 # meters, standard deviation; per-point trainable
+      scale_xy_max: 0.08
+      edge_split_start: null # keep RoadNodes count and positions fixed
+      edge_split_step: null
     init:
       from_lidar: True
       opacity_init_value: 0.7
+      high_frequency:
+        enabled: true
+        base_spacing: 0.05
+        frame_stride: 10
+        max_views: 60
+        min_view_baseline: 0.5 # meters, per camera temporal separation
+        min_support_views: 3
+        min_support_ratio: 0.35
+        fine_gradient_min: 0.04
+        coarse_gradient_min: 0.015
+        erosion_px: 4
+        edge_band_px: 3
+        max_depth: 60
+        depth_tolerance: 0.25
+        relative_depth_tolerance: 0.02
+        height_tolerance: 0.05
+        max_extra_ratio: 0.25
+        detail_scale: 0.015
+        detail_opacity: 0.1
+        detail_warmup_steps: 1000
+        color_samples: 7
+        projection_chunk_size: 131072
+        preview_views: 5
     reg:
       from_lidar: True
-      lowest_opacity: 0.2
-      alpha_min: 0.2 # opt into differentiable opacity floor
+      lowest_opacity: 0.01
+      alpha_min: 0.01 # permit boundary-crossing Gaussians to fade out
+      legacy_opacity_floor: 0.2 # preserve unmarked old checkpoints on import
   SMPLNodes: 
     type: models.nodes.SMPLNodes
     init:

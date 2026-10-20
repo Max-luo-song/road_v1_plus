@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from utils.road_scales import decode_road_scales
 
 
 def composite(hits):
@@ -68,8 +69,7 @@ def main():
         scales = node['_scales'].exp()
         opacity = node['_opacities'].sigmoid().flatten()
         if name == 'RoadNodes':
-            scales[:, :2].clamp_(.02,.08)
-            scales[:, 2:].clamp_(.003,.01)
+            scales = decode_road_scales(node['_scales'], node.get('_scale_xy_bounds', (-1., -1.)))
             floor = float(node.get('_opacity_alpha_min', -1))
             opacity = floor+(1-floor)*opacity if floor >= 0 else opacity.clamp(min=.2)
         with torch.no_grad():

@@ -113,6 +113,7 @@ class MultiTrainer(BasicTrainer):
     def init_gaussians_from_dataset(
         self,
         dataset: DrivingDataset,
+        initialization_output_dir=None,
     ) -> None:
         # get instance points
         rigidnode_pts_dict, deformnode_pts_dict, smplnode_pts_dict, trafficlightnode_pts_dict = {}, {}, {}, {}
@@ -274,6 +275,9 @@ class MultiTrainer(BasicTrainer):
                     init_means=processed_init_road_pts["pts"],
                     init_colors=processed_init_road_pts["colors"],
                     lane_samples=lane_samples,
+                    road_cameras=dataset.pixel_source.camera_data,
+                    road_train_frames=dataset.train_timesteps,
+                    initialization_output_dir=initialization_output_dir,
                 )
                 if not empty:
                     logger.info(f"RoadNodes Initialized Finish!")
